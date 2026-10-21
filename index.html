@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Труба с бутылками: 3D-превью</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --panel: #f3f6f7;
+    --panel-line: #d3dde1;
+    --ink: #172229;
+    --ink-soft: #52656e;
+    --field: #ffffff;
+    --accent: #e9a52c;
+    --accent-ink: #1f1500;
+    --stage-top: #1c2a33;
+    --stage-bottom: #05090c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --panel: #131c21;
+      --panel-line: #25343c;
+      --ink: #e3edf0;
+      --ink-soft: #94a9b2;
+      --field: #1b272e;
+    }
+  }
+  :root[data-theme="dark"] {
+    --panel: #131c21;
+    --panel-line: #25343c;
+    --ink: #e3edf0;
+    --ink-soft: #94a9b2;
+    --field: #1b272e;
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0; height: 100%;
+    background: var(--panel);
+    color: var(--ink);
+    font-family: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px; line-height: 1.45;
+  }
+  .app { display: grid; grid-template-columns: 330px minmax(0, 1fr); height: 100%; }
+  .panel {
+    background: var(--panel); border-right: 1px solid var(--panel-line);
+    padding: 22px 20px 24px; overflow-y: auto;
+  }
+  h1 { font-size: 20px; line-height: 1.2; margin: 0 0 6px; font-weight: 700; }
+  .lead { margin: 0 0 18px; color: var(--ink-soft); font-size: 13.5px; }
+  h2 { font-size: 14px; font-weight: 700; margin: 20px 0 10px; }
+  .row { margin-bottom: 12px; }
+  .row label.t { display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 4px; }
+  .row output { font-weight: 600; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label {
+    text-align: center; padding: 8px 4px; font-size: 13px; cursor: pointer;
+    background: var(--field); border: 1px solid var(--panel-line); border-radius: 8px;
+  }
+  .seg input:checked + label { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .seg input:focus-visible + label { outline: 2px solid var(--ink); outline-offset: 2px; }
+  button {
+    font: inherit; font-size: 14px; cursor: pointer; border-radius: 8px;
+    padding: 10px 12px; border: 1px solid var(--panel-line);
+    background: var(--field); color: var(--ink);
+  }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .btns { display: grid; gap: 8px; margin-top: 14px; }
+  .btns .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stats { margin-top: 18px; padding: 12px 14px; background: var(--field); border: 1px solid var(--panel-line); border-radius: 10px; }
+  .stats div { display: flex; justify-content: space-between; gap: 10px; }
+  .stats b { font-variant-numeric: tabular-nums; }
+  .note { margin: 14px 0 0; font-size: 12.5px; color: var(--ink-soft); }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  fieldset:disabled { opacity: .45; }
+  button:disabled { opacity: .45; cursor: default; }
+  .chk { display: flex; gap: 8px; align-items: center; font-size: 13.5px; margin-top: 4px; }
+  .chk input { accent-color: var(--accent); }
+  .stage {
+    position: relative; min-width: 0; min-height: 0; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 30%, var(--stage-top), var(--stage-bottom) 75%);
+  }
+  .stage canvas { display: block; touch-action: none; cursor: grab; }
+  .stage canvas:active { cursor: grabbing; }
+  .views { position: absolute; left: 0; right: 0; bottom: 12px; display: flex; justify-content: center; gap: 6px; pointer-events: none; }
+  .views button { pointer-events: auto; background: rgba(10,16,20,.7); color: #dbe7eb; border-color: rgba(255,255,255,.16); padding: 7px 12px; font-size: 13px; }
+  .toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(10,16,20,.8); color: #e8f1f4; padding: 7px 14px; border-radius: 8px; font-size: 13.5px; display: none; }
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+    .stage { order: 1; }
+    .panel { order: 2; max-height: 48vh; border-right: 0; border-top: 1px solid var(--panel-line); padding: 16px 16px 20px; }
+    .lead { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel">
+    <h1>Труба с бутылками</h1>
+    <p class="lead">Бутылки сыплются в прозрачную трубу по законам физики. Тяните мышью или пальцем, чтобы вращать, колесом или щипком менять масштаб.</p>
+
+    <h2>Труба</h2>
+    <div class="row">
+      <label class="t" for="D">Внутренний диаметр <output id="oD"></output></label>
+      <input id="D" type="range" min="25" max="80" step="5" value="40">
+    </div>
+    <div class="row">
+      <label class="t" for="H">Высота <output id="oH"></output></label>
+      <input id="H" type="range" min="60" max="300" step="10" value="150">
+    </div>
+
+    <h2>Бутылки</h2>
+    <div class="row">
+      <div class="seg" role="radiogroup" aria-label="Тип бутылок">
+        <input type="radio" name="type" id="t033" value="0.33"><label for="t033">0,33 л</label>
+        <input type="radio" name="type" id="t05" value="0.5" checked><label for="t05">0,5 л</label>
+        <input type="radio" name="type" id="t15" value="1.5"><label for="t15">1,5 л</label>
+        <input type="radio" name="type" id="tmix" value="mix"><label for="tmix">Смесь</label>
+      </div>
+    </div>
+    <div class="row">
+      <label class="t" for="C">Количество <output id="oC"></output></label>
+      <input id="C" type="range" min="10" max="400" step="10" value="120">
+    </div>
+
+    <div class="btns">
+      <button class="primary" id="again">Насыпать заново</button>
+      <div class="two">
+        <button id="more">Досыпать 20</button>
+        <button id="full">Заполнить до верха</button>
+      </div>
+      <button id="lid">Закрыть крышкой</button>
+    </div>
+
+    <h2>Наклейка вокруг трубы</h2>
+    <div class="row">
+      <input id="imgFile" type="file" accept="image/*" hidden>
+      <div class="pair">
+        <button id="imgPick">Загрузить картинку</button>
+        <button id="imgClear" disabled>Убрать</button>
+      </div>
+    </div>
+    <fieldset id="stk" disabled>
+      <div class="row">
+        <label class="t" for="sO">Непрозрачность <output id="oSO"></output></label>
+        <input id="sO" type="range" min="0" max="100" step="5" value="100">
+      </div>
+      <div class="row">
+        <label class="t" for="sH">Высота наклейки <output id="oSH"></output></label>
+        <input id="sH" type="range" min="10" max="300" step="5" value="60">
+      </div>
+      <div class="row">
+        <label class="t" for="sB">Расстояние от пола <output id="oSB"></output></label>
+        <input id="sB" type="range" min="0" max="290" step="5" value="20">
+      </div>
+      <div class="row">
+        <label class="t" for="sA">Охват по кругу <output id="oSA"></output></label>
+        <input id="sA" type="range" min="30" max="360" step="10" value="360">
+      </div>
+      <label class="chk"><input type="checkbox" id="sP"> Сохранять пропорции картинки</label>
+    </fieldset>
+
+    <div class="stats" aria-live="polite">
+      <div><span>Бутылок в трубе</span><b id="sN">0</b></div>
+      <div><span>Уровень засыпки</span><b id="sL">—</b></div>
+    </div>
+    <p class="note">Физика упрощённая: бутылки считаются жёсткими, поэтому плотность укладки ориентировочная. Для точных цифр сделайте пробную засыпку в натуральную трубу.</p>
+  </aside>
+
+  <main class="stage" id="stage">
+    <div class="toast" id="toast" role="status"></div>
+    <div class="views">
+      <button id="vFront">Спереди</button>
+      <button id="vIso">Под углом</button>
+      <button id="vTop">Сверху</button>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+
+  var P = { D: 40, H: 150, type: '0.5', count: 120 };
+  var R = 0.2, H = 1.5;
+
+  /* Размеры бутылок, метры: r — радиус корпуса, h — полная высота, ln — длина горлышка с плечиком */
+  var TYPES = {
+    '0.33': { r: 0.03,   h: 0.17, ln: 0.05 },
+    '0.5':  { r: 0.0325, h: 0.21, ln: 0.06 },
+    '1.5':  { r: 0.045,  h: 0.31, ln: 0.075 }
+  };
+  var CAP_COLORS = [0x2f7fd1, 0xe9edef, 0x2fa84f, 0xd9392b, 0xf0a21b];
+  var LABEL_COLORS = [0xeeeeee, 0x2f7fd1, 0x2fa84f, 0xd9392b];
+
+  /* ---------- three.js ---------- */
+  var stage = $('stage');
+  var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+  stage.insertBefore(renderer.domElement, stage.firstChild);
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(35, 1, 0.05, 60);
+
+  function makeEnv() {
+    var c = document.createElement('canvas');
+    c.width = 1024; c.height = 512;
+    var g = c.getContext('2d');
+    var grd = g.createLinearGradient(0, 0, 0, 512);
+    grd.addColorStop(0, '#344855');
+    grd.addColorStop(0.5, '#10171c');
+    grd.addColorStop(1, '#05080a');
+    g.fillStyle = grd; g.fillRect(0, 0, 1024, 512);
+    g.fillStyle = '#ffffff';
+    [[90, 140, 60, 210], [370, 130, 46, 220], [640, 140, 70, 210], [900, 130, 46, 220]].forEach(function (b) {
+      g.globalAlpha = 0.95; g.fillRect(b[0], b[1], b[2], b[3]);
+    });
+    g.globalAlpha = 0.75; g.fillStyle = '#cfe4ee'; g.fillRect(0, 0, 1024, 46);
+    var tex = new THREE.CanvasTexture(c);
+    tex.mapping = THREE.EquirectangularReflectionMapping;
+    tex.encoding = THREE.sRGBEncoding;
+    var pm = new THREE.PMREMGenerator(renderer);
+    var env = pm.fromEquirectangular(tex).texture;
+    pm.dispose(); tex.dispose();
+    return env;
+  }
+  var env = makeEnv();
+  scene.environment = env;
+
+  var key = new THREE.DirectionalLight(0xffffff, 0.6);
+  key.position.set(2, 4, 3);
+  scene.add(key);
+  scene.add(new THREE.AmbientLight(0x8fa6b2, 0.25));
+
+  var matTube = new THREE.MeshPhysicalMaterial({
+    color: 0xdaf0f8, transparent: true, opacity: 0.13, roughness: 0.04, metalness: 0,
+    envMap: env, envMapIntensity: 1.7, side: THREE.DoubleSide, depthWrite: false
+  });
+  var matRing = new THREE.MeshStandardMaterial({ color: 0xcfe7f1, transparent: true, opacity: 0.55, roughness: 0.2, envMap: env });
+  var matPet = new THREE.MeshPhysicalMaterial({
+    color: 0xcde8f4, transparent: true, opacity: 0.3, roughness: 0.06, metalness: 0,
+    envMap: env, envMapIntensity: 1.9, side: THREE.DoubleSide, depthWrite: false
+  });
+  var matCaps = CAP_COLORS.map(function (c) { return new THREE.MeshStandardMaterial({ color: c, roughness: 0.45, envMap: env }); });
+  var matLabels = LABEL_COLORS.map(function (c) { return new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, side: THREE.DoubleSide }); });
+  var matBase = new THREE.MeshStandardMaterial({ color: 0x2a363d, roughness: 0.4, metalness: 0.6, envMap: env });
+
+  /* пол с мягким кругом света */
+  (function () {
+    var c = document.createElement('canvas'); c.width = c.height = 256;
+    var g = c.getContext('2d');
+    var rg = g.createRadialGradient(128, 128, 4, 128, 128, 128);
+    rg.addColorStop(0, 'rgba(120,150,165,0.45)');
+    rg.addColorStop(1, 'rgba(120,150,165,0)');
+    g.fillStyle = rg; g.fillRect(0, 0, 256, 256);
+    var t = new THREE.CanvasTexture(c);
+    var m = new THREE.Mesh(new THREE.CircleGeometry(2.2, 48), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false }));
+    m.rotation.x = -Math.PI / 2; m.position.y = -0.002;
+    scene.add(m);
+  })();
+
+  /* ---------- физика ---------- */
+  var world, floorBody, walls = [], bodies = [];
+  var bottleMat = new CANNON.Material('bottle');
+  var wallMat = new CANNON.Material('wall');
+
+  function initWorld() {
+    world = new CANNON.World();
+    world.gravity.set(0, -9.82, 0);
+    world.allowSleep = true;
+    world.broadphase = new CANNON.SAPBroadphase(world);
+    world.solver.iterations = 14;
+    world.addContactMaterial(new CANNON.ContactMaterial(bottleMat, bottleMat, { friction: 0.35, restitution: 0.08 }));
+    world.addContactMaterial(new CANNON.ContactMaterial(bottleMat, wallMat, { friction: 0.2, restitution: 0.05 }));
+    floorBody = new CANNON.Body({ mass: 0, material: wallMat });
+    floorBody.addShape(new CANNON.Plane());
+    floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+    world.addBody(floorBody);
+  }
+
+  /* ---------- модели бутылок ---------- */
+  var TY = {};
+  function buildType(k) {
+    var t = TYPES[k], r = t.r, h = t.h, ln = t.ln, rn = r * 0.42, lb = h - ln, y0 = -h / 2;
+    var pts = [
+      [0, y0], [r * 0.6, y0], [r * 0.9, y0 + r * 0.12], [r, y0 + r * 0.45],
+      [r, y0 + lb - r * 0.5], [r * 0.8, y0 + lb - r * 0.1],
+      [rn * 1.3, y0 + lb + ln * 0.25], [rn, y0 + lb + ln * 0.4], [rn, h / 2 - 0.012]
+    ].map(function (p) { return new THREE.Vector2(p[0], p[1]); });
+    var geo = new THREE.LatheGeometry(pts, 28);
+    var cap = new THREE.CylinderGeometry(rn * 1.15, rn * 1.15, 0.02, 18);
+    cap.translate(0, h / 2 - 0.01, 0);
+    var label = new THREE.CylinderGeometry(r * 1.012, r * 1.012, lb * 0.42, 28, 1, true);
+    label.translate(0, y0 + lb * 0.5, 0);
+    var sph = [];
+    var n = Math.max(2, Math.round(lb / (r * 1.1)));
+    for (var i = 0; i < n; i++) sph.push([r, y0 + r + (lb - 2 * r) * i / (n - 1)]);
+    sph.push([rn * 1.15, h / 2 - rn * 1.3]);
+    TY[k] = { r: r, h: h, geo: geo, cap: cap, label: label, sph: sph };
+  }
+  Object.keys(TYPES).forEach(buildType);
+
+  /* ---------- труба ---------- */
+  var tubeGroup = null;
+
+  function label(text) {
+    var c = document.createElement('canvas'); c.width = 128; c.height = 64;
+    var g = c.getContext('2d');
+    g.font = '600 30px sans-serif'; g.fillStyle = '#9fb6c0';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(text, 64, 32);
+    var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false }));
+    sp.scale.set(0.16, 0.08, 1);
+    sp.renderOrder = 20;
+    return sp;
+  }
+
+  function buildTube() {
+    if (tubeGroup) scene.remove(tubeGroup);
+    walls.forEach(function (w) { world.removeBody(w); });
+    walls = [];
+    tubeGroup = new THREE.Group();
+
+    var shell = new THREE.Mesh(new THREE.CylinderGeometry(R, R, H, 72, 1, true), matTube);
+    shell.position.y = H / 2; shell.renderOrder = 10;
+    tubeGroup.add(shell);
+
+    [0, H].forEach(function (y) {
+      var ring = new THREE.Mesh(new THREE.TorusGeometry(R, 0.005, 8, 72), matRing);
+      ring.rotation.x = Math.PI / 2; ring.position.y = y; ring.renderOrder = 11;
+      tubeGroup.add(ring);
+    });
+    var base = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.03, R + 0.035, 0.03, 48), matBase);
+    base.position.y = -0.015;
+    tubeGroup.add(base);
+
+    /* линейка: деления через 10 см, подписи через 50 см */
+    var rx = -(R + 0.12);
+    var pos = [];
+    for (var cm = 0; cm <= P.H; cm += 10) {
+      var len = cm % 50 === 0 ? 0.05 : 0.025;
+      pos.push(rx, cm / 100, 0, rx + len, cm / 100, 0);
+    }
+    var lg = new THREE.BufferGeometry();
+    lg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    tubeGroup.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x6f8791 })));
+    for (var m = 0; m <= P.H; m += 50) {
+      var sp = label(m + ' см');
+      sp.position.set(rx - 0.1, m / 100, 0);
+      tubeGroup.add(sp);
+    }
+    scene.add(tubeGroup);
+    buildSticker();
+    buildLid();
+
+    /* физические стенки: кольцо из коробок */
+    var N = Math.max(24, Math.round(R * 160)), th = 0.04;
+    var halfW = R * Math.tan(Math.PI / N) * 1.03 + 0.002;
+    for (var i = 0; i < N; i++) {
+      var a = i / N * Math.PI * 2;
+      var b = new CANNON.Body({ mass: 0, material: wallMat });
+      b.addShape(new CANNON.Box(new CANNON.Vec3(th / 2, H / 2, halfW)));
+      b.position.set((R + th / 2) * Math.cos(a), H / 2, (R + th / 2) * Math.sin(a));
+      b.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), -a);
+      world.addBody(b); walls.push(b);
+    }
+  }
+
+  /* ---------- бутылки ---------- */
+  var poured = 0, target = 0, autoFill = false, spawnTimer = 0, lastLevel = 0;
+
+  function randQ() {
+    var u1 = Math.random(), u2 = Math.random() * 2 * Math.PI, u3 = Math.random() * 2 * Math.PI;
+    var a = Math.sqrt(1 - u1), b = Math.sqrt(u1);
+    return [a * Math.sin(u2), a * Math.cos(u2), b * Math.sin(u3), b * Math.cos(u3)];
+  }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function spawn() {
+    var k = P.type === 'mix' ? pick(['0.33', '0.5', '1.5']) : P.type;
+    var T = TY[k];
+    var maxR = Math.max(0.02, R - T.h * 0.5 - 0.01);
+
+    var x, z, y = H + 0.35, tries = 0;
+    for (;;) {
+      var rr = Math.sqrt(Math.random()) * maxR, an = Math.random() * Math.PI * 2;
+      x = rr * Math.cos(an); z = rr * Math.sin(an);
+      var clash = false;
+      for (var i = 0; i < bodies.length; i++) {
+        var p = bodies[i].body.position;
+        if (p.y > H + 0.05) {
+          var dx = p.x - x, dy = p.y - y, dz = p.z - z;
+          if (dx * dx + dy * dy + dz * dz < T.h * T.h * 1.1) { clash = true; break; }
+        }
+      }
+      if (!clash) break;
+      if (++tries % 6 === 0) y += 0.08;
+      if (tries > 80) break;
+    }
+
+    var body = new CANNON.Body({ mass: 0.05, material: bottleMat });
+    T.sph.forEach(function (s) { body.addShape(new CANNON.Sphere(s[0]), new CANNON.Vec3(0, s[1], 0)); });
+    var q = randQ();
+    body.position.set(x, y, z);
+    body.quaternion.set(q[0], q[1], q[2], q[3]);
+    body.velocity.set(0, -1.2, 0);
+    body.linearDamping = 0.04; body.angularDamping = 0.2;
+    body.allowSleep = true; body.sleepSpeedLimit = 0.12; body.sleepTimeLimit = 0.6;
+    world.addBody(body);
+
+    var g = new THREE.Group();
+    g.add(new THREE.Mesh(T.geo, matPet));
+    g.add(new THREE.Mesh(T.cap, pick(matCaps)));
+    if (Math.random() < 0.55) g.add(new THREE.Mesh(T.label, pick(matLabels)));
+    g.position.copy(body.position);
+    scene.add(g);
+    bodies.push({ body: body, mesh: g, T: T });
+    poured++;
+  }
+
+  function clearBottles() {
+    bodies.forEach(function (o) { world.removeBody(o.body); scene.remove(o.mesh); });
+    bodies = [];
+  }
+
+  function shouldSpawn() { return !lidClosed && !lidAnim && (poured < target || (autoFill && poured < 1500)); }
+
+  function level() {
+    var ys = [];
+    bodies.forEach(function (o) {
+      var v = o.body.velocity;
+      if (Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z) < 0.6 && o.body.position.y < H + 0.05) ys.push(o.body.position.y + o.T.r);
+    });
+    if (ys.length < 3) return 0;
+    ys.sort(function (a, b) { return a - b; });
+    return ys[Math.floor(ys.length * 0.94)];
+  }
+
+  /* ---------- крышка ---------- */
+  var lidMesh = null, lidBody = null, lidClosed = false, lidAnim = 0, lidT = 0, lidFrom = 0, lidTo = 0;
+  var matLid = new THREE.MeshPhysicalMaterial({
+    color: 0xe9f3f7, transparent: true, opacity: 0.55, roughness: 0.35, metalness: 0,
+    envMap: env, envMapIntensity: 1.2, side: THREE.DoubleSide, depthWrite: false
+  });
+
+  function updLidBtn() {
+    var b = $('lid');
+    b.textContent = lidClosed ? 'Открыть крышку' : 'Закрыть крышкой';
+    b.disabled = !!lidAnim;
+  }
+
+  function buildLid() {
+    if (lidMesh) scene.remove(lidMesh);
+    var g = new THREE.Group();
+    var disc = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.012, R + 0.012, 0.012, 72), matLid);
+    disc.position.y = 0.006; disc.renderOrder = 12;
+    var rim = new THREE.Mesh(new THREE.TorusGeometry(R + 0.012, 0.006, 8, 72), matRing);
+    rim.rotation.x = Math.PI / 2; rim.position.y = 0.006; rim.renderOrder = 12;
+    g.add(disc); g.add(rim);
+    g.position.y = lidClosed ? H : H + 0.6;
+    g.visible = lidClosed;
+    lidMesh = g; scene.add(g);
+  }
+
+  function resetLid() {
+    if (lidBody) { world.removeBody(lidBody); lidBody = null; }
+    lidClosed = false; lidAnim = 0; lidT = 0;
+    updLidBtn();
+  }
+
+  /* верхняя точка бутылки с учётом наклона */
+  function topOf(o) {
+    var a = new CANNON.Vec3(0, 1, 0), out = new CANNON.Vec3();
+    o.body.quaternion.vmult(a, out);
+    return o.body.position.y + Math.abs(out.y) * (o.T.h / 2 - o.T.r) + o.T.r;
+  }
+
+  function toggleLid() {
+    if (lidAnim) return;
+    if (!lidClosed) {
+      autoFill = false;
+      var removed = 0;
+      bodies = bodies.filter(function (o) {
+        if (topOf(o) > H - 0.002) { world.removeBody(o.body); scene.remove(o.mesh); removed++; return false; }
+        return true;
+      });
+      poured = bodies.length; target = poured;
+      lidMesh.visible = true;
+      lidFrom = H + 0.6; lidTo = H; lidAnim = 1; lidT = 0;
+      if (removed) toast('Не поместилось под крышку и убрано бутылок: ' + removed);
+    } else {
+      if (lidBody) { world.removeBody(lidBody); lidBody = null; }
+      lidClosed = false;
+      lidFrom = H; lidTo = H + 0.6; lidAnim = 2; lidT = 0;
+    }
+    updLidBtn();
+  }
+
+  function stepLid(dt) {
+    if (!lidAnim) return;
+    lidT = Math.min(1, lidT + dt / 0.7);
+    var e = lidT * lidT * (3 - 2 * lidT);
+    lidMesh.position.y = lidFrom + (lidTo - lidFrom) * e;
+    if (lidT >= 1) {
+      if (lidAnim === 1) {
+        lidClosed = true;
+        lidBody = new CANNON.Body({ mass: 0, material: wallMat });
+        lidBody.addShape(new CANNON.Box(new CANNON.Vec3(R + 0.012, 0.02, R + 0.012)));
+        lidBody.position.set(0, H + 0.02, 0);
+        world.addBody(lidBody);
+      } else {
+        lidMesh.visible = false;
+      }
+      lidAnim = 0; updLidBtn();
+    }
+  }
+  $('lid').onclick = toggleLid;
+
+  /* ---------- наклейка ---------- */
+  var stkTex = null, stkMesh = null, stkAspect = 1;
+  var matStk = new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide, depthWrite: false, toneMapped: false });
+
+  function updStkLabels() {
+    $('oSO').textContent = $('sO').value + '%';
+    $('oSH').textContent = $('sH').value + ' см';
+    $('oSB').textContent = $('sB').value + ' см';
+    $('oSA').textContent = $('sA').value + '°';
+    $('sA').disabled = $('sP').checked;
+  }
+
+  function setStkUI(on) {
+    $('stk').disabled = !on;
+    $('imgClear').disabled = !on;
+    if (on) $('sA').disabled = $('sP').checked;
+  }
+
+  function buildSticker() {
+    if (stkMesh) { tubeGroup.remove(stkMesh); stkMesh.geometry.dispose(); stkMesh = null; }
+    if (!stkTex) return;
+    var h = Math.min(+$('sH').value, P.H) / 100;
+    var b = Math.max(0, Math.min(+$('sB').value / 100, H - h));
+    var ang = $('sP').checked ? Math.min(2 * Math.PI, h * stkAspect / R) : (+$('sA').value) * Math.PI / 180;
+    var seg = Math.max(8, Math.round(72 * ang / (2 * Math.PI)));
+    var g = new THREE.CylinderGeometry(R + 0.0025, R + 0.0025, h, seg, 1, true, -ang / 2, ang);
+    stkMesh = new THREE.Mesh(g, matStk);
+    stkMesh.position.y = b + h / 2;
+    stkMesh.renderOrder = 13;
+    tubeGroup.add(stkMesh);
+    matStk.opacity = +$('sO').value / 100;
+  }
+
+  function loadSticker(file) {
+    if (!file || file.type.indexOf('image/') !== 0) { toast('Нужен файл-картинка (PNG, JPG, WebP)'); return; }
+    var fr = new FileReader();
+    fr.onload = function () {
+      var im = new Image();
+      im.onload = function () {
+        var s = Math.min(1, 2048 / Math.max(im.width, im.height));
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(im.width * s));
+        c.height = Math.max(1, Math.round(im.height * s));
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        if (stkTex) stkTex.dispose();
+        stkTex = new THREE.CanvasTexture(c);
+        stkTex.encoding = THREE.sRGBEncoding;
+        stkTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        stkAspect = c.width / c.height;
+        matStk.map = stkTex; matStk.needsUpdate = true;
+        setStkUI(true); updStkLabels(); buildSticker();
+        view.az = 0; view.pol = Math.PI / 2;
+      };
+      im.onerror = function () { toast('Не удалось открыть картинку'); };
+      im.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  }
+
+  $('imgPick').onclick = function () { $('imgFile').click(); };
+  $('imgFile').addEventListener('change', function () { loadSticker(this.files[0]); });
+  $('imgClear').onclick = function () {
+    if (stkTex) { stkTex.dispose(); stkTex = null; }
+    matStk.map = null; matStk.needsUpdate = true;
+    $('imgFile').value = '';
+    buildSticker(); setStkUI(false);
+  };
+  ['sO', 'sH', 'sB', 'sA'].forEach(function (id) {
+    $(id).addEventListener('input', function () { updStkLabels(); buildSticker(); });
+  });
+  $('sP').addEventListener('change', function () { updStkLabels(); buildSticker(); });
+  stage.addEventListener('dragover', function (e) { e.preventDefault(); });
+  stage.addEventListener('drop', function (e) {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) loadSticker(e.dataTransfer.files[0]);
+  });
+  updStkLabels();
+
+  /* ---------- сброс ---------- */
+  function readParams() {
+    P.D = +$('D').value; P.H = +$('H').value; P.count = +$('C').value;
+    P.type = document.querySelector('input[name=type]:checked').value;
+    R = P.D / 200; H = P.H / 100;
+    $('oD').textContent = P.D + ' см'; $('oH').textContent = P.H + ' см'; $('oC').textContent = P.count + ' шт';
+  }
+
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.style.display = 'block';
+    clearTimeout(toast.h); toast.h = setTimeout(function () { t.style.display = 'none'; }, 3500);
+  }
+
+  var view = { az: 0.6, pol: 1.32, dist: 3.4, target: new THREE.Vector3(0, 0.75, 0) };
+  function frame() {
+    view.target.set(0, H / 2, 0);
+    view.dist = Math.max(1.3, H * 1.9);
+  }
+
+  function reset(doFrame) {
+    clearBottles();
+    readParams();
+    autoFill = false; poured = 0; target = P.count; spawnTimer = 0;
+    resetLid();
+    buildTube();
+    if (doFrame) frame(); else view.target.set(0, H / 2, 0);
+    $('toast').style.display = 'none';
+  }
+
+  /* ---------- камера ---------- */
+  function updateCam() {
+    var s = Math.sin(view.pol);
+    camera.position.set(
+      view.target.x + view.dist * s * Math.sin(view.az),
+      view.target.y + view.dist * Math.cos(view.pol),
+      view.target.z + view.dist * s * Math.cos(view.az));
+    camera.lookAt(view.target);
+  }
+  var ptrs = {}, pinch = 0;
+  var cv = renderer.domElement;
+  cv.addEventListener('pointerdown', function (e) { cv.setPointerCapture(e.pointerId); ptrs[e.pointerId] = { x: e.clientX, y: e.clientY }; pinch = 0; });
+  cv.addEventListener('pointermove', function (e) {
+    var p = ptrs[e.pointerId]; if (!p) return;
+    var ids = Object.keys(ptrs);
+    if (ids.length === 1) {
+      view.az -= (e.clientX - p.x) * 0.006;
+      view.pol = Math.min(Math.PI - 0.05, Math.max(0.05, view.pol - (e.clientY - p.y) * 0.006));
+    }
+    p.x = e.clientX; p.y = e.clientY;
+    if (ids.length === 2) {
+      var a = ptrs[ids[0]], b = ptrs[ids[1]];
+      var d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (pinch) view.dist = Math.min(14, Math.max(0.5, view.dist * pinch / d));
+      pinch = d;
+    }
+  });
+  function endPtr(e) { delete ptrs[e.pointerId]; pinch = 0; }
+  cv.addEventListener('pointerup', endPtr);
+  cv.addEventListener('pointercancel', endPtr);
+  cv.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    view.dist = Math.min(14, Math.max(0.5, view.dist * Math.exp(e.deltaY * 0.001)));
+  }, { passive: false });
+
+  function setView(az, pol) { view.az = az; view.pol = pol; view.target.set(0, H / 2, 0); view.dist = Math.max(1.3, H * 1.9); }
+  $('vFront').onclick = function () { setView(0, Math.PI / 2); };
+  $('vIso').onclick = function () { setView(0.6, 1.32); };
+  $('vTop').onclick = function () { setView(0, 0.001); view.target.set(0, H * 0.5, 0); view.dist = Math.max(1.3, H * 1.9); };
+
+  /* ---------- интерфейс ---------- */
+  var deb;
+  function onParam(doFrame) { readParams(); clearTimeout(deb); deb = setTimeout(function () { reset(doFrame); }, 180); }
+  $('D').addEventListener('input', function () { onParam(false); });
+  $('H').addEventListener('input', function () { onParam(true); });
+  $('C').addEventListener('input', function () { onParam(false); });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=type]'), function (el) {
+    el.addEventListener('change', function () { onParam(false); });
+  });
+  $('again').onclick = function () { reset(false); };
+  $('more').onclick = function () {
+    if (lidClosed) { toast('Сначала откройте крышку'); return; }
+    target = poured + 20;
+  };
+  $('full').onclick = function () {
+    if (lidClosed) { toast('Сначала откройте крышку'); return; }
+    autoFill = true; toast('Сыплю, пока труба не заполнится…');
+  };
+
+  function resize() {
+    var w = stage.clientWidth, h = stage.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
+  window.addEventListener('resize', resize);
+
+  /* ---------- цикл ---------- */
+  var last = performance.now(), statT = 0;
+  function tick(now) {
+    var dt = Math.min((now - last) / 1000, 0.05); last = now;
+
+    var interval = autoFill ? 0.07 : 0.035;
+    spawnTimer += dt;
+    while (spawnTimer > interval && shouldSpawn()) { spawn(); spawnTimer -= interval; }
+    if (!shouldSpawn()) spawnTimer = 0;
+
+    world.step(1 / 90, dt, 6);
+    for (var i = 0; i < bodies.length; i++) {
+      var o = bodies[i];
+      o.mesh.position.copy(o.body.position);
+      o.mesh.quaternion.copy(o.body.quaternion);
+    }
+
+    statT += dt;
+    if (statT > 0.25) {
+      statT = 0;
+      lastLevel = level();
+      $('sN').textContent = bodies.length + ' шт';
+      $('sL').textContent = lastLevel > 0 ? '≈ ' + Math.round(lastLevel * 100) + ' из ' + P.H + ' см' : '—';
+      if (autoFill && lastLevel > H - 0.2) {
+        autoFill = false;
+        toast('Труба заполнена: ' + bodies.length + ' бутылок');
+      }
+    }
+
+    stepLid(dt);
+    updateCam();
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  }
+
+  initWorld();
+  reset(true);
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
